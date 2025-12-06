@@ -43,7 +43,7 @@ const bufferLength = analyser.frequencyBinCount;
 const timeData = new Uint8Array(bufferLength);
 const freqData = new Uint8Array(bufferLength);
 
-/* === LOCAL SOUNDS === */
+/* === LOCAL SOUNDS (DEPLOYMENT SAFE) === */
 const sounds = {
   kick: "kick.wav",
   clap: "clap.wav",
@@ -53,7 +53,9 @@ const sounds = {
   cat: "cat.wav",
 };
 
-let currentSource = null;
+/* === AUDIO STATE === */
+let currentAudio = null;
+let currentSourceNode = null;
 
 /* === MUTE STATE === */
 let isMuted = false;
@@ -62,30 +64,36 @@ let lastVolume = gainNode.gain.value;
 /* === Grid State === */
 let gridOffset = 0;
 
-/* === Play Sound === */
-async function playSound(type) {
-  try {
-    if (audioCtx.state === "suspended") await audioCtx.resume();
+/* === Play Sound (✅ FIXED WAY) === */
+function playSound(type) {
+  if (audioCtx.state === "suspended") audioCtx.resume();
 
-    if (currentSource) {
-      try { currentSource.stop(); } catch {}
-    }
-
-    const res = await fetch(sounds[type]);
-    const buffer = await audioCtx.decodeAudioData(await res.arrayBuffer());
-
-    const source = audioCtx.createBufferSource();
-    source.buffer = buffer;
-    source.connect(gainNode);
-    source.start();
-    currentSource = source;
-
-    const btn = document.querySelector(`button[data-sound="${type}"]`);
-    btn.classList.add("active");
-    setTimeout(() => btn.classList.remove("active"), 160);
-  } catch (err) {
-    console.error("Audio playback failed:", err);
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio.currentTime = 0;
   }
+
+  const audio = new Audio(sounds[type]);
+  audio.crossOrigin = "anonymous";
+  audio.volume = isMuted ? 0 : gainNode.gain.value;
+
+  if (currentSourceNode) {
+    try {
+      currentSourceNode.disconnect();
+    } catch {}
+  }
+
+  const sourceNode = audioCtx.createMediaElementSource(audio);
+  sourceNode.connect(gainNode);
+
+  audio.play();
+
+  currentAudio = audio;
+  currentSourceNode = sourceNode;
+
+  const btn = document.querySelector(`button[data-sound="${type}"]`);
+  btn.classList.add("active");
+  setTimeout(() => btn.classList.remove("active"), 160);
 }
 
 /* === Button Events === */
@@ -94,7 +102,7 @@ buttons.forEach(btn =>
 );
 
 /* === Volume Control === */
-volumeSlider.addEventListener("input", (e) => {
+volumeSlider.addEventListener("input", e => {
   gainNode.gain.value = e.target.value;
   lastVolume = e.target.value;
 
@@ -102,6 +110,10 @@ volumeSlider.addEventListener("input", (e) => {
     isMuted = false;
     muteBtn.textContent = "MUTE";
     muteBtn.classList.remove("muted");
+  }
+
+  if (currentAudio && !isMuted) {
+    currentAudio.volume = e.target.value;
   }
 });
 
@@ -112,10 +124,12 @@ muteBtn.addEventListener("click", () => {
   if (isMuted) {
     lastVolume = gainNode.gain.value;
     gainNode.gain.value = 0;
+    if (currentAudio) currentAudio.volume = 0;
     muteBtn.textContent = "UNMUTE";
     muteBtn.classList.add("muted");
   } else {
     gainNode.gain.value = lastVolume || 0.6;
+    if (currentAudio) currentAudio.volume = gainNode.gain.value;
     muteBtn.textContent = "MUTE";
     muteBtn.classList.remove("muted");
   }
@@ -128,9 +142,8 @@ function drawGrid(bass) {
   gridOffset += speed;
 
   ctx.save();
-  ctx.strokeStyle = "rgba(243, 237, 237, 0.04)";
+  ctx.strokeStyle = "rgba(243,237,237,0.04)";
   ctx.lineWidth = 0.8;
-  ctx.shadowBlur = 0;
 
   for (let x = -spacing + (gridOffset % spacing); x < canvas.width; x += spacing) {
     ctx.beginPath();
@@ -156,27 +169,25 @@ function draw() {
   analyser.getByteTimeDomainData(timeData);
   analyser.getByteFrequencyData(freqData);
 
-  /* Bass detection */
   let bassSum = 0;
   const bassRange = Math.floor(bufferLength * 0.1);
   for (let i = 0; i < bassRange; i++) bassSum += freqData[i];
   const bass = bassSum / bassRange / 255;
 
-  /* Background */
   ctx.fillStyle = "rgba(0,0,0,0.18)";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   drawGrid(bass);
 
-  /* WAVEFORM */
+  /* Waveform (thin) */
   ctx.lineWidth = 1 + bass * 1.2;
   ctx.strokeStyle = "#d36a1f";
   ctx.shadowBlur = 18;
   ctx.shadowColor = "#d36a1f";
 
   ctx.beginPath();
-  const sliceWidth = canvas.width / bufferLength;
   let x = 0;
+  const sliceWidth = canvas.width / bufferLength;
 
   for (let i = 0; i < bufferLength; i++) {
     const v = timeData[i] / 128;
@@ -188,7 +199,6 @@ function draw() {
   ctx.stroke();
   ctx.shadowBlur = 0;
 
-  /* Quote reaction */
   if (quote) {
     quote.style.opacity = 0.75 + bass * 0.25;
     quote.style.textShadow = `
@@ -197,7 +207,6 @@ function draw() {
     `;
   }
 
-  /* Divider reaction */
   if (divider) {
     divider.style.height = `${2 + bass * 6}px`;
     divider.style.boxShadow = `0 0 ${20 + bass * 50}px rgba(211,106,31,0.7)`;
