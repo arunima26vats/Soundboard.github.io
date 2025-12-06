@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Soundboard Visualizer</title>
+
+  <!-- browser tab icon -->
+  <link rel="icon" type="image/png" href="vinyl.png">
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+
+  <canvas id="visualizer"></canvas>
+
+  <header>
+    <h1>SOUNDBOARD</h1>
+  </header>
+
+  <main>
+    <!-- Quote -->
+    <div class="quote-container">
+      <h2>MUSIC</h2>
+      <p class="quote">can alter moods and talk to you.</p>
+    </div>
+
+    <!-- Divider -->
+    <div class="divider"></div>
+
+    <!-- Buttons -->
+    <div class="buttons">
+      <button data-sound="kick">KICK</button>
+      <button data-sound="clap">CLAP</button>
+      <button data-sound="pop">POP</button>
+      <button data-sound="synth">SYNTH</button>
+      <button data-sound="dog">DOG</button>
+      <button data-sound="cat">CAT</button>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <label>VOL</label>
+    <input type="range" id="volume" min="0" max="1" step="0.01" value="0.6" />
+    <button id="muteBtn">MUTE</button> 
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
