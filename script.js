@@ -45,12 +45,12 @@ const freqData = new Uint8Array(bufferLength);
 
 /* === LOCAL SOUNDS === */
 const sounds = {
-  kick: "sounds/kick.wav",
-  clap: "sounds/clap.wav",
-  pop: "sounds/pop.wav",
-  synth: "sounds/synth.wav",
-  dog: "sounds/dog.wav",
-  cat: "sounds/cat.wav",
+  kick: "kick.wav",
+  clap: "clap.wav",
+  pop: "pop.wav",
+  synth: "synth.wav",
+  dog: "dog.wav",
+  cat: "cat.wav",
 };
 
 let currentSource = null;
@@ -205,3 +205,4 @@ function draw() {
 }
 
 draw();
+
